@@ -1,12 +1,5 @@
 import pandas as pd
-import numpy as np
-from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import LabelEncoder, StandardScaler, OneHotEncoder
-from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error, root_mean_squared_error, r2_score
+from sklearn.preprocessing import LabelEncoder
 
 # Load the dataset
 df = pd.read_csv("used_cars.csv")
