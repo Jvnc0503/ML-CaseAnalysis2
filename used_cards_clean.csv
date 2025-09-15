@@ -1,4 +1,4 @@
-brand,milage,fuel_type,transmission,accident,clean_title,price,hp,engine_displacement,is_v_engine,age
+brand,mileage,fuel_type,transmission,accident,clean_title,price,hp,engine_displacement,is_v_engine,age
 Ford,51000,1,0,1,1,10300.0,300.0,3.7,1,12
 Hyundai,34742,2,0,1,1,38005.0,246.7,3.8,1,4
 Lexus,22372,2,0,0,0,54598.0,303.6592592592593,3.5,0,3

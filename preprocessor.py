@@ -86,9 +86,12 @@ for cat_col in categorical_columns:
 
 # region Feature engineering
 df['age'] = 2025 - df['model_year']
-#df['milage_per_year'] = df.apply(lambda row: row['milage'] / row['age'] if row['age'] > 0 else row['milage'], axis=1)
+#df['mileage_per_year'] = df.apply(lambda row: row['milage'] / row['age'] if row['age'] > 0 else row['milage'], axis=1)
 #df['age_bin'] = pd.qcut(df['age'], q=4, labels=['New', 'Mid', 'Old', 'Very Old'])
-#df['milage_bin'] = pd.qcut(df['milage'], q=4, labels=['Low', 'Mid', 'High', 'Very High'])
+#df['mileage_bin'] = pd.qcut(df['milage'], q=4, labels=['Low', 'Mid', 'High', 'Very High'])
+
+# Correct typo
+df.rename(columns={'milage': 'mileage'}, inplace=True)
 
 # Drop features
 df.drop(columns=['model', 'model_year', 'engine', 'ext_col', 'int_col'], axis=1, inplace=True)
