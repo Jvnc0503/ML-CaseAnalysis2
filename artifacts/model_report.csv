@@ -1,0 +1,2 @@
+model,RMSE_train,RMSE_test,MAE_train,MAE_test,R2_train,R2_test,best_iteration_,best_score_valid_rmse
+"XGBoost(train API, bestparams+features)",15676.39939566018,25182.75883765588,6965.52668624878,10130.059288940429,0.8800593547450424,0.7223906470364913,1458,0.3211313161580922

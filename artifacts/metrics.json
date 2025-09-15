@@ -1,0 +1,27 @@
+{
+  "best_model": "XGBoost(train API, bestparams+features)",
+  "metrics": {
+    "model": "XGBoost(train API, bestparams+features)",
+    "RMSE_train": 15676.39939566018,
+    "RMSE_test": 25182.75883765588,
+    "MAE_train": 6965.52668624878,
+    "MAE_test": 10130.059288940429,
+    "R2_train": 0.8800593547450424,
+    "R2_test": 0.7223906470364913,
+    "best_iteration_": 1458,
+    "best_score_valid_rmse": 0.3211313161580922
+  },
+  "all_models": [
+    {
+      "model": "XGBoost(train API, bestparams+features)",
+      "RMSE_train": 15676.39939566018,
+      "RMSE_test": 25182.75883765588,
+      "MAE_train": 6965.52668624878,
+      "MAE_test": 10130.059288940429,
+      "R2_train": 0.8800593547450424,
+      "R2_test": 0.7223906470364913,
+      "best_iteration_": 1458,
+      "best_score_valid_rmse": 0.3211313161580922
+    }
+  ]
+}
