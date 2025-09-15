@@ -1,0 +1,17 @@
+# Entorno virtual
+.venv/
+venv/
+ENV/
+env/
+
+# Archivos de Python cacheados
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos de logs y temporales
+*.log
+logs/
+*.tmp
+*.swp
