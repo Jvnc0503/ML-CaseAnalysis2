@@ -89,4 +89,4 @@ df.rename(columns={'milage': 'mileage'}, inplace=True)
 # Drop features
 df.drop(columns=['model', 'model_year', 'engine', 'ext_col', 'int_col'], axis=1, inplace=True)
 
-df.to_csv('used_cards_clean.csv', index=False)
+df.to_csv('used_cars_clean.csv', index=False)
