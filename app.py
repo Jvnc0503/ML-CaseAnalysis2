@@ -3,6 +3,12 @@ import pandas as pd
 import numpy as np
 import joblib
 
+st.set_page_config(
+    page_title="Used Car Dealership",
+    page_icon="🚗",
+    layout="wide"
+)
+
 # Load model + bias and encoders
 data = joblib.load("used_cars_model.pkl")
 model = data["model"]
