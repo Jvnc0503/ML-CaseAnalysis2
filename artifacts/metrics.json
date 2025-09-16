@@ -23,5 +23,7 @@
       "best_iteration_": 1458,
       "best_score_valid_rmse": 0.3211313161580922
     }
-  ]
+  ],
+  "clean_csv_relative_to_repo_root": "dataset_clean.csv",
+  "clean_csv_in_artifacts": "artifacts/dataset_clean.csv"
 }
