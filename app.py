@@ -4,7 +4,7 @@ import numpy as np
 import joblib
 
 # Load trained model and encoders
-model = joblib.load("car_price_model.pkl")
+model = joblib.load("used_cars_model.pkl")
 encoders = joblib.load("encoders.pkl")
 
 st.title("Used Car Dealership 🚗")
@@ -22,7 +22,7 @@ if user_type == 'Seller':
     year = st.number_input("Model Year", min_value=1980, max_value=2025, value=2015, step=1)
     mileage = st.number_input("Mileage (mi)", min_value=0, value=50000, step=1000)
     hp = st.number_input("Horsepower (hp)", min_value=50, value=200, step=10)
-    displacement = st.number_input("Engine Displacement (L)", min_value=1.0, value=2.0, step=0.1)
+    displacement = st.number_input("Engine Displacement (L)", min_value=0.5, value=2.0, step=0.1)
     transmission = st.selectbox("Transmission Type", ['MT', 'AT', 'CVT', 'OTHER'])
     fuel_type = st.selectbox("Fuel Type", ['GASOLINE', 'DIESEL', 'HYBRID', 'ELECTRIC', 'OTHER'])
     accident = st.selectbox("Accident History", ['No accidents', 'At least 1 accident or damage reported'])
@@ -49,14 +49,18 @@ if user_type == 'Seller':
         for col in ['fuel_type', 'transmission', 'is_v_engine', 'brand']:
             if col in encoders:
                 le = encoders[col]
-                # If user input is unseen, map to "Other" if possible
+                # Handle unseen labels
                 if input_data.at[0, col] not in le.classes_:
                     input_data.at[0, col] = le.classes_[0]  # fallback
                 input_data[col] = le.transform(input_data[col])
+
+        # Ensure feature order matches training
+        feature_order = pd.read_csv("used_cars_processed.csv").drop(columns=["price"]).columns.tolist()
+        input_data = input_data[feature_order]
 
         # Predict (model trained on log(price))
         pred_log = model.predict(input_data)[0]
         estimated_price = np.expm1(pred_log)
 
         st.success(f"💰 Estimated Market Price: ${estimated_price:,.2f}")
-        st.caption("Based on historical sales of similar cars.")
+
