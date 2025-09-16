@@ -1,92 +1,113 @@
+# preprocessing.py
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
+import joblib
 
-# Load the dataset
-df = pd.read_csv("used_cars.csv")
+def preprocess_data(input_file="used_cars.csv", output_file="used_cars_processed.csv"):
+    df = pd.read_csv(input_file)
 
-# region Preprocessing
+    # --- Clean numeric fields ---
+    df['milage'] = (
+        df['milage']
+        .str.replace(' mi.', '', regex=False)
+        .str.replace(',', '', regex=False)
+        .astype(int)
+    )
+    df['price'] = (
+        df['price']
+        .str.replace('$', '', regex=False)
+        .str.replace(',', '', regex=False)
+        .astype(float)
+    )
 
-# Replace prefix
-df['milage'] = df['milage'].str.replace(' mi.', '').str.replace(',', '').astype(int)
-df['price'] = df['price'].str.replace('$', '').str.replace(',', '').astype(float)
+    # --- Feature extraction ---
+    df['hp'] = df['engine'].str.extract(r'(\d+\.\d+)HP').astype(float, errors='ignore')
+    df['engine_displacement'] = df['engine'].str.extract(r'(\d+\.\d+)\s*L')
+    df['engine_displacement'] = df['engine_displacement'].fillna(
+        df['engine'].str.extract(r'(\d+\.\d+)\s*LITER')[0]
+    )
+    df['engine_displacement'] = df['engine_displacement'].astype(float, errors='ignore')
+    df['is_v_engine'] = df['engine'].str.contains(r'V\d+', case=False, na=False)
 
-# Feature extraction
-df['hp'] = df['engine'].str.extract(r'(\d+\.\d+)HP').astype(float, errors='ignore')
-df['engine_displacement'] = df['engine'].str.extract(r'(\d+\.\d+)\s*L')
-df['engine_displacement'] = df['engine_displacement'].fillna(df['engine'].str.extract(r'(\d+\.\d+)\s*LITER')[0])
-df['engine_displacement'] = df['engine_displacement'].astype(float, errors='ignore')
-df['is_v_engine'] = df['engine'].str.contains(r'V\d+', case=False, na=False)
+    # --- Clean fuel_type ---
+    df['fuel_type'] = (
+        df['fuel_type']
+        .str.strip()
+        .str.upper()
+        .replace({'PLUG-IN HYBRID': 'HYBRID', 'NOT SUPPORTED': 'OTHER', '–': 'OTHER'})
+    )
 
-# Clean fuel_type
-df['fuel_type'] = df['fuel_type'].str.strip().str.upper().replace({'PLUG-IN HYBRID': 'HYBRID', 'NOT SUPPORTED':'OTHER', '–':'OTHER'})
-
-# Clean transmission
-def classify_transmission(t: str) -> str:
-    t = t.upper()
-    if 'M/T' in t or 'MT' in t or 'MANUAL' in t:
-        return 'MT'
-    elif 'A/T' in t or 'AT' in t or 'AUTOMATIC' in t:
-        return 'AT'
-    elif 'CVT' in t or 'VARIABLE' in t or 'SINGLE-SPEED' in t:
-        return 'CVT'
-    else:
-        return 'OTHER'
+    # --- Clean transmission ---
+    def classify_transmission(t: str) -> str:
+        t = str(t).upper()
+        if 'M/T' in t or 'MT' in t or 'MANUAL' in t:
+            return 'MT'
+        elif 'A/T' in t or 'AT' in t or 'AUTOMATIC' in t:
+            return 'AT'
+        elif 'CVT' in t or 'VARIABLE' in t or 'SINGLE-SPEED' in t:
+            return 'CVT'
+        else:
+            return 'OTHER'
     
-df['transmission'] = df['transmission'].apply(classify_transmission)
+    df['transmission'] = df['transmission'].apply(classify_transmission)
 
-# region Handle missing values
+    # --- Handle missing values ---
+    df['hp'] = df.groupby('brand')['hp'].transform(lambda x: x.fillna(x.mean()))
+    df.dropna(subset=['hp'], inplace=True)
 
-# Assigns mean hp per brand, if brand has no hp values, drop those rows
-df['hp'] = df.groupby('brand')['hp'].transform(lambda x: x.fillna(x.mean()))
-df.dropna(subset=['hp'], inplace=True)
+    most_common_fuel = df.groupby('brand')['fuel_type'].agg(
+        lambda x: x.mode()[0] if not x.mode().empty else None
+    )
+    df['fuel_type'] = df.apply(
+        lambda row: most_common_fuel[row['brand']] if pd.isna(row['fuel_type']) else row['fuel_type'],
+        axis=1
+    )
+    df['fuel_type'] = df['fuel_type'].fillna('OTHER')
 
-# For categorical features, fill missing with most common value per brand, if still missing, fill with 'OTHER'
-most_common_fuel = df.groupby('brand')['fuel_type'].agg(lambda x: x.mode()[0] if not x.mode().empty else None)
-df['fuel_type'] = df.apply(
-    lambda row: most_common_fuel[row['brand']] if pd.isna(row['fuel_type']) else row['fuel_type'],
-    axis=1
-)
-df['fuel_type'] = df['fuel_type'].fillna('OTHER')
+    most_common_disp = df.groupby('brand')['engine_displacement'].agg(
+        lambda x: x.mode()[0] if not x.mode().empty else None
+    )
+    df['engine_displacement'] = df.apply(
+        lambda row: most_common_disp[row['brand']] if pd.isna(row['engine_displacement']) else row['engine_displacement'],
+        axis=1
+    )
+    df['engine_displacement'] = df['engine_displacement'].fillna(df['engine_displacement'].median())
 
-# For numerical features, fill missing with most common value per brand, if still missing, fill with median
-most_common_displacement = df.groupby('brand')['engine_displacement'].agg(lambda x: x.mode()[0] if not x.mode().empty else None)
-df['engine_displacement'] = df.apply(
-    lambda row: most_common_displacement[row['brand']] if pd.isna(row['engine_displacement']) else row['engine_displacement'],
-    axis=1
-)
-df['engine_displacement'] = df['engine_displacement'].fillna(df['engine_displacement'].median())
+    # --- Remove outliers ---
+    for col in ['engine_displacement', 'hp', 'price', 'milage']:
+        Q1, Q3 = df[col].quantile([0.25, 0.75])
+        IQR = Q3 - Q1
+        lower, upper = Q1 - 1.5 * IQR, Q3 + 1.5 * IQR
+        df = df[(df[col] >= lower) & (df[col] <= upper)]
 
-# region Remove outliers
-columns = ['engine_displacement', 'hp', 'price', 'milage']
-for col in columns:
-    Q1 = df[col].quantile(0.25)  
-    Q3 = df[col].quantile(0.75)   
-    IQR = Q3 - Q1                    
-    
-    lower_bound = Q1 - 1.5 * IQR
-    upper_bound = Q3 + 1.5 * IQR
-    
-    df = df[(df[col] >= lower_bound) & (df[col] <= upper_bound)]
+    # --- Encode categorical features ---
+    df['accident'] = df['accident'].apply(
+        lambda x: 1 if x == 'At least 1 accident or damage reported' else 0
+    )
+    df['clean_title'] = df['clean_title'].apply(lambda x: 1 if x == 'Yes' else 0)
 
-# region Encode categorical features
-df['accident'] = df['accident'].apply(lambda x: 1 if x == 'At least 1 accident or damage reported' else 0)
-df['clean_title'] = df['clean_title'].apply(lambda x: 1 if x == 'Yes' else 0)
-categorical_columns = ['fuel_type', 'transmission', 'is_v_engine']
+    # Encoders dictionary to save for later
+    encoders = {}
 
-for cat_col in categorical_columns:
-    encoder = LabelEncoder()
-    df[cat_col] = encoder.fit_transform(df[cat_col])
+    for col in ['fuel_type', 'transmission', 'is_v_engine', 'brand']:
+        le = LabelEncoder()
+        df[col] = le.fit_transform(df[col])
+        encoders[col] = le
 
-# region Feature engineering
-df['age'] = 2025 - df['model_year']
-#df['mileage_per_year'] = df.apply(lambda row: row['milage'] / row['age'] if row['age'] > 0 else row['milage'], axis=1)
-#df['age_bin'] = pd.qcut(df['age'], q=4, labels=['New', 'Mid', 'Old', 'Very Old'])
-#df['mileage_bin'] = pd.qcut(df['milage'], q=4, labels=['Low', 'Mid', 'High', 'Very High'])
+    # --- Feature engineering ---
+    df['age'] = 2025 - df['model_year']
+    df.rename(columns={'milage': 'mileage'}, inplace=True)
 
-# Correct typo
-df.rename(columns={'milage': 'mileage'}, inplace=True)
+    # Drop unused columns
+    df.drop(columns=['model', 'model_year', 'engine', 'ext_col', 'int_col'], inplace=True)
 
-# Drop features
-df.drop(columns=['model', 'model_year', 'engine', 'ext_col', 'int_col'], axis=1, inplace=True)
+    # Save cleaned dataset
+    df.to_csv(output_file, index=False)
+    print(f"✅ Preprocessing complete. Clean data saved to {output_file}")
 
-df.to_csv('used_cars_clean.csv', index=False)
+    # Save encoders for later use in training/Streamlit
+    joblib.dump(encoders, "encoders.pkl")
+    print("✅ Encoders saved to encoders.pkl")
+
+if __name__ == "__main__":
+    preprocess_data()
